@@ -7,8 +7,8 @@ import subprocess
 import plistlib as PlistParser
 
 
-appPath = "/Users/name/Desktop/myAppName.app"
-entitlements = "/Users/name/Desktop/entitlements.plist"
+appPath = "/Users/user/Desktop/MyApp.app"
+entitlements = "/Users/user/Desktop/entitlements.plist"
 signingProfileName = "3rd Party Mac Developer Application: Company, INC."
 signingInstallerProfileName = ""
 
@@ -32,6 +32,28 @@ ApplicationCategoryValue = "public.app-category.arcade-games"
 ReadableCopyRightValue = "MyCompany  v1.0.0 (c) MyCompany, Inc."
 
 
+def removeMetaFilesFromDirectiory(dirPath):
+	fileslist = []
+	for root, dirs, files in os.walk(dirPath):
+		for file in files:
+			if file.endswith('.meta'):
+				metaFilePath = root + '/' + file
+				fileslist.append(metaFilePath)
+				
+	for filePath in fileslist:
+		print 'deleting file: ', filePath
+		os.remove(filePath)
+
+def signPlugins():
+	pluginsPath = appPath + '/Contents/Plugins'
+	if os.path.exists(pluginsPath):
+		for plugin in os.listdir(pluginsPath):
+			p = pluginsPath + '/' + plugin
+			removeMetaFilesFromDirectiory(p)
+			executeCodeSign(p)
+
+
+
 def UpdateInfoPlist():
 	plistPath = appPath + "/Contents/Info.plist"
 
@@ -52,6 +74,16 @@ def UpdateInfoPlist():
 	allData["NSHumanReadableCopyright"] = ReadableCopyRightValue
 
 	PlistParser.writePlist(allData, plistPath)
+
+
+def executeCodeSign(pathToTargetSign):
+	codesignPlugin = subprocess.call(["codesign", "--deep", "-f", "-v", "-s", signingProfileName, "--entitlements", entitlements, pathToTargetSign])
+	if codesignPlugin == 0:
+		print '\nSigning Completed of ', pathToTargetSign
+		return True
+	else:
+		print subprocess.CalledProcessError
+		return False
 
 
 def AppSigning():
@@ -90,6 +122,8 @@ def  main():
 		return
 
 	UpdateInfoPlist()
+
+	signPlugins()
 
 	isSigned = AppSigning()
 
